@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  short_url:
+    build: .
+    container_name: short_url
+    hostname: short_url
+    depends_on:
+      - pg
+    environment:
+      - PG_URL=postgresql+asyncpg://short_url:12345@pg:5432/short_url
+    ports:
+      - 8000:8000
+    volumes:
+      - .:/app
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        echo -e "Waiting for db to be ready...\n"
+        sleep 30
+        alembic upgrade head
+        uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
+
+  pg:
+    image: postgres:12
+    environment:
+      - POSTGRES_USER=short_url
+      - POSTGRES_PASSWORD=12345
+      - POSTGRES_DB=short_url
+    ports:
+      - 5432:5432
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+
+networks:
+  default:
+    name: short_url
